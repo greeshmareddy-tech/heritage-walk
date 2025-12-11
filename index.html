@@ -1,0 +1,202 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HeritageWalk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Leaflet Map Library -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+    }
+
+    header {
+        background: #1a237e;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-size: 25px;
+        font-weight: bold;
+    }
+
+    #controls {
+        padding: 10px;
+        background: white;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        border-bottom: 2px solid #ddd;
+    }
+
+    #map {
+        height: 400px;
+        width: 100%;
+    }
+
+    #siteDetails {
+        padding: 20px;
+        background: white;
+        margin: 15px;
+        border-radius: 8px;
+    }
+
+    .site-card img {
+        width: 100%;
+        border-radius: 6px;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 4px;
+        background: #1a237e;
+        color: white;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: #3f51b5;
+    }
+
+    @media (max-width: 600px) {
+        #map { height: 300px; }
+    }
+</style>
+</head>
+
+<body>
+
+<header>HeritageWalk – Explore Cultural Heritage</header>
+
+<div id="controls">
+    <input id="searchBox" type="text" placeholder="Search by name or city..." style="padding:8px; width:200px;">
+    <select id="filterType" style="padding:8px;">
+        <option value="">Filter by Type</option>
+        <option>Monument</option>
+        <option>Museum</option>
+        <option>Temple</option>
+        <option>Fort</option>
+    </select>
+    <button class="btn" onclick="clearFilters()">Clear</button>
+</div>
+
+<div id="map"></div>
+
+<div id="siteDetails">
+    <h2>Site Details</h2>
+    <p>Select a marker on the map to view information.</p>
+</div>
+
+<script>
+// ---------------- Heritage Data ----------------
+const heritageSites = [
+    {
+        name: "Charminar",
+        city: "Hyderabad",
+        type: "Monument",
+        lat: 17.3616,
+        lng: 78.4747,
+        image: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Charminar_sbs.JPG",
+        description: "A historic monument built in 1591, symbolizing Hyderabad."
+    },
+    {
+        name: "Red Fort",
+        city: "Delhi",
+        type: "Fort",
+        lat: 28.6562,
+        lng: 77.2410,
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Red_Fort_in_Delhi_03-2016_img3.jpg/640px-Red_Fort_in_Delhi_03-2016_img3.jpg",
+        description: "A UNESCO World Heritage Site and former residence of Mughal emperors."
+    },
+    {
+        name: "Indian Museum",
+        city: "Kolkata",
+        type: "Museum",
+        lat: 22.5570,
+        lng: 88.3501,
+        image: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Indian_Museum_Kolkata_2010.JPG",
+        description: "India’s oldest museum with rare collections of fossils and artefacts."
+    }
+];
+
+// ---------------- Initialize Map ----------------
+let map = L.map("map").setView([20.59, 78.96], 5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+let markers = [];
+
+// Add Markers
+heritageSites.forEach(site => {
+    let marker = L.marker([site.lat, site.lng])
+        .addTo(map)
+        .bindPopup(`<b>${site.name}</b><br>${site.city}`);
+
+    marker.on("click", () => showDetails(site));
+    markers.push({ marker, site });
+});
+
+// ---------------- Show Details ----------------
+function showDetails(site) {
+    document.getElementById("siteDetails").innerHTML = `
+        <div class="site-card">
+            <h2>${site.name}</h2>
+            <img src="${site.image}">
+            <p><b>City:</b> ${site.city}</p>
+            <p><b>Type:</b> ${site.type}</p>
+            <p>${site.description}</p>
+
+            <h3>Virtual Tour (Demo)</h3>
+            <iframe width="100%" height="250" src="https://www.youtube.com/embed/21X5lGlDOfg" allowfullscreen></iframe>
+
+            <button class="btn" onclick="markVisited('${site.name}')">Mark as Visited</button>
+        </div>
+    `;
+}
+
+// ---------------- Search & Filter ----------------
+document.getElementById("searchBox").addEventListener("input", filterSites);
+document.getElementById("filterType").addEventListener("change", filterSites);
+
+function filterSites() {
+    let search = document.getElementById("searchBox").value.toLowerCase();
+    let type = document.getElementById("filterType").value;
+
+    markers.forEach(m => {
+        let match =
+            (m.site.name.toLowerCase().includes(search) ||
+             m.site.city.toLowerCase().includes(search)) &&
+            (type === "" || m.site.type === type);
+
+        if (match) {
+            m.marker.addTo(map);
+        } else {
+            map.removeLayer(m.marker);
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById("searchBox").value = "";
+    document.getElementById("filterType").value = "";
+    filterSites();
+}
+
+// ---------------- Visited Sites Tracker ----------------
+function markVisited(name) {
+    let visited = JSON.parse(localStorage.getItem("visitedSites") || "[]");
+    if (!visited.includes(name)) visited.push(name);
+    localStorage.setItem("visitedSites", JSON.stringify(visited));
+    alert("Marked as visited!");
+}
+
+</script>
+
+</body>
+</html>
