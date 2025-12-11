@@ -1,201 +1,222 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>HeritageWalk</title>
+<title>CompanionChat</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Leaflet Map Library -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
     body {
-        margin: 0;
         font-family: Arial, sans-serif;
-        background: #f5f5f5;
+        margin: 0;
+        background: #f0f4f8;
+        transition: background 0.3s, color 0.3s;
     }
 
     header {
-        background: #1a237e;
+        background: #0277bd;
         color: white;
         padding: 15px;
         text-align: center;
-        font-size: 25px;
+        font-size: 26px;
         font-weight: bold;
     }
 
-    #controls {
-        padding: 10px;
-        background: white;
+    .container {
+        padding: 20px;
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 20px;
         justify-content: center;
-        border-bottom: 2px solid #ddd;
     }
 
-    #map {
-        height: 400px;
-        width: 100%;
-    }
-
-    #siteDetails {
-        padding: 20px;
+    .box {
         background: white;
-        margin: 15px;
-        border-radius: 8px;
+        padding: 20px;
+        width: 320px;
+        border-radius: 10px;
+        box-shadow: 0 0 6px rgba(0,0,0,0.1);
     }
 
-    .site-card img {
+    h2 {
+        margin-top: 0;
+        color: #01579b;
+    }
+
+    button {
+        background: #0277bd;
+        color: white;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 8px;
+    }
+
+    button:hover {
+        background: #0288d1;
+    }
+
+    input, textarea {
         width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
+
+    .message {
+        background: #e1f5fe;
+        padding: 10px;
+        margin: 8px 0;
         border-radius: 6px;
     }
 
-    .btn {
-        padding: 8px 14px;
-        border: none;
-        border-radius: 4px;
-        background: #1a237e;
+    /* Dark Mode */
+    .dark {
+        background: #1e1e1e;
         color: white;
-        cursor: pointer;
     }
-
-    .btn:hover {
-        background: #3f51b5;
-    }
-
-    @media (max-width: 600px) {
-        #map { height: 300px; }
-    }
+    .dark header { background: #000; }
+    .dark .box { background: #2c2c2c; color: white; }
+    .dark .message { background: #424242; color: white; }
 </style>
 </head>
 
 <body>
 
-<header>HeritageWalk – Explore Cultural Heritage</header>
+<header>CompanionChat – Elderly Support Platform</header>
 
-<div id="controls">
-    <input id="searchBox" type="text" placeholder="Search by name or city..." style="padding:8px; width:200px;">
-    <select id="filterType" style="padding:8px;">
-        <option value="">Filter by Type</option>
-        <option>Monument</option>
-        <option>Museum</option>
-        <option>Temple</option>
-        <option>Fort</option>
-    </select>
-    <button class="btn" onclick="clearFilters()">Clear</button>
+<div style="text-align:center; margin:10px;">
+    <button onclick="toggleDarkMode()">Toggle Dark/Light Mode</button>
 </div>
 
-<div id="map"></div>
+<div class="container">
 
-<div id="siteDetails">
-    <h2>Site Details</h2>
-    <p>Select a marker on the map to view information.</p>
+    <!-- Messaging -->
+    <div class="box">
+        <h2>Messages</h2>
+        <textarea id="messageInput" placeholder="Type a message..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+        <div id="messageList"></div>
+    </div>
+
+    <!-- Reminders -->
+    <div class="box">
+        <h2>Reminders</h2>
+        <input id="reminderText" placeholder="Reminder (e.g., Take medicine)">
+        <input id="reminderTime" type="time">
+        <button onclick="addReminder()">Add Reminder</button>
+        <ul id="reminderList"></ul>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="box">
+        <h2>Daily Activity Log</h2>
+        <textarea id="logInput" placeholder="Write activity..."></textarea>
+        <button onclick="addLog()">Add to Log</button>
+        <div id="logList"></div>
+    </div>
+
+    <!-- Optional Enhancements -->
+    <div class="box">
+        <h2>Enhancements</h2>
+
+        <button onclick="speakReminder()">Voice Reminder Demo</button>
+
+        <p style="margin-top:10px;">Video Call Placeholder:</p>
+        <iframe width="100%" height="180" src="https://www.youtube.com/embed/21X5lGlDOfg"></iframe>
+    </div>
+
 </div>
 
 <script>
-// ---------------- Heritage Data ----------------
-const heritageSites = [
-    {
-        name: "Charminar",
-        city: "Hyderabad",
-        type: "Monument",
-        lat: 17.3616,
-        lng: 78.4747,
-        image: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Charminar_sbs.JPG",
-        description: "A historic monument built in 1591, symbolizing Hyderabad."
-    },
-    {
-        name: "Red Fort",
-        city: "Delhi",
-        type: "Fort",
-        lat: 28.6562,
-        lng: 77.2410,
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Red_Fort_in_Delhi_03-2016_img3.jpg/640px-Red_Fort_in_Delhi_03-2016_img3.jpg",
-        description: "A UNESCO World Heritage Site and former residence of Mughal emperors."
-    },
-    {
-        name: "Indian Museum",
-        city: "Kolkata",
-        type: "Museum",
-        lat: 22.5570,
-        lng: 88.3501,
-        image: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Indian_Museum_Kolkata_2010.JPG",
-        description: "India’s oldest museum with rare collections of fossils and artefacts."
-    }
-];
+// ---------------- MESSAGING ----------------
+function sendMessage() {
+    let msg = document.getElementById("messageInput").value;
+    if (msg.trim() === "") return;
 
-// ---------------- Initialize Map ----------------
-let map = L.map("map").setView([20.59, 78.96], 5);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    let messages = JSON.parse(localStorage.getItem("messages") || "[]");
+    messages.push(msg);
+    localStorage.setItem("messages", JSON.stringify(messages));
 
-let markers = [];
-
-// Add Markers
-heritageSites.forEach(site => {
-    let marker = L.marker([site.lat, site.lng])
-        .addTo(map)
-        .bindPopup(`<b>${site.name}</b><br>${site.city}`);
-
-    marker.on("click", () => showDetails(site));
-    markers.push({ marker, site });
-});
-
-// ---------------- Show Details ----------------
-function showDetails(site) {
-    document.getElementById("siteDetails").innerHTML = `
-        <div class="site-card">
-            <h2>${site.name}</h2>
-            <img src="${site.image}">
-            <p><b>City:</b> ${site.city}</p>
-            <p><b>Type:</b> ${site.type}</p>
-            <p>${site.description}</p>
-
-            <h3>Virtual Tour (Demo)</h3>
-            <iframe width="100%" height="250" src="https://www.youtube.com/embed/21X5lGlDOfg" allowfullscreen></iframe>
-
-            <button class="btn" onclick="markVisited('${site.name}')">Mark as Visited</button>
-        </div>
-    `;
+    document.getElementById("messageInput").value = "";
+    loadMessages();
 }
 
-// ---------------- Search & Filter ----------------
-document.getElementById("searchBox").addEventListener("input", filterSites);
-document.getElementById("filterType").addEventListener("change", filterSites);
-
-function filterSites() {
-    let search = document.getElementById("searchBox").value.toLowerCase();
-    let type = document.getElementById("filterType").value;
-
-    markers.forEach(m => {
-        let match =
-            (m.site.name.toLowerCase().includes(search) ||
-             m.site.city.toLowerCase().includes(search)) &&
-            (type === "" || m.site.type === type);
-
-        if (match) {
-            m.marker.addTo(map);
-        } else {
-            map.removeLayer(m.marker);
-        }
+function loadMessages() {
+    let messages = JSON.parse(localStorage.getItem("messages") || "[]");
+    let box = document.getElementById("messageList");
+    box.innerHTML = "";
+    messages.forEach(m => {
+        box.innerHTML += `<div class="message">${m}</div>`;
     });
 }
 
-function clearFilters() {
-    document.getElementById("searchBox").value = "";
-    document.getElementById("filterType").value = "";
-    filterSites();
+// ---------------- REMINDERS ----------------
+function addReminder() {
+    let text = document.getElementById("reminderText").value;
+    let time = document.getElementById("reminderTime").value;
+
+    if (text.trim() === "" || time === "") return;
+
+    let reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
+    reminders.push({ text, time });
+    localStorage.setItem("reminders", JSON.stringify(reminders));
+
+    loadReminders();
 }
 
-// ---------------- Visited Sites Tracker ----------------
-function markVisited(name) {
-    let visited = JSON.parse(localStorage.getItem("visitedSites") || "[]");
-    if (!visited.includes(name)) visited.push(name);
-    localStorage.setItem("visitedSites", JSON.stringify(visited));
-    alert("Marked as visited!");
+function loadReminders() {
+    let reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
+    let list = document.getElementById("reminderList");
+    list.innerHTML = "";
+
+    reminders.forEach(r => {
+        list.innerHTML += `<li><b>${r.time}</b> – ${r.text}</li>`;
+    });
 }
 
+// Voice reminder demo
+function speakReminder() {
+    let msg = new SpeechSynthesisUtterance("This is your reminder. Please check your schedule.");
+    speechSynthesis.speak(msg);
+}
+
+// ---------------- ACTIVITY LOG ----------------
+function addLog() {
+    let text = document.getElementById("logInput").value;
+    if (text.trim() === "") return;
+
+    let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+    logs.push(text);
+    localStorage.setItem("logs", JSON.stringify(logs));
+
+    document.getElementById("logInput").value = "";
+    loadLogs();
+}
+
+function loadLogs() {
+    let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+    let box = document.getElementById("logList");
+    box.innerHTML = "";
+    logs.forEach(l => {
+        box.innerHTML += `<div class="message">${l}</div>`;
+    });
+}
+
+// ---------------- DARK MODE ----------------
+function toggleDarkMode() {
+    document.body.classList.toggle("dark");
+}
+
+// ---------------- LOAD ALL DATA ON START ----------------
+window.onload = () => {
+    loadMessages();
+    loadReminders();
+    loadLogs();
+};
 </script>
 
 </body>
